@@ -1,1 +1,67 @@
-(()=>{"use strict";const $=id=>document.getElementById(id);const slug=decodeURIComponent(location.pathname).replace(/^\\/+|\\/+$/g,"");let flip=null,pdfUrl="";function fail(msg){$("loading").classList.add("hidden");$("error-message").textContent=msg;$("error").classList.remove("hidden")}function count(){if(flip)$("page-count").textContent=(flip.getCurrentPageIndex()+1)+" / "+flip.getPageCount()}async function run(){if(!slug){$("loading").classList.add("hidden");$("empty").classList.remove("hidden");return}try{if(!window.pdfjsLib||!window.St?.PageFlip)throw Error("Não foi possível carregar o leitor. Atualiza a página.");const res=await fetch("/books.json");if(!res.ok)throw Error("Catálogo não encontrado.");const books=await res.json();const book=books.find(x=>x.slug===slug);if(!book)throw Error("Este ebook não existe. Confirma o link.");pdfUrl=book.file;pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";const pdf=await pdfjsLib.getDocument(pdfUrl).promise;const first=await pdf.getPage(1);const base=first.getViewport({scale:1});const scale=Math.min(1.6,Math.max(1,window.innerWidth*1.15/base.width));const w=Math.ceil(base.width*scale),h=Math.ceil(base.height*scale),pages=[];for(let n=1;n<=pdf.numPages;n++){const p=n===1?first:await pdf.getPage(n),v=p.getViewport({scale}),c=document.createElement("canvas");c.width=Math.ceil(v.width);c.height=Math.ceil(v.height);await p.render({canvasContext:c.getContext("2d",{alpha:false}),viewport:v}).promise;const el=document.createElement("div");el.className="page";el.appendChild(c);pages.push(el)}$("loading").classList.add("hidden");$("book-shell").classList.remove("hidden");$("toolbar").classList.remove("hidden");$("controls").classList.remove("hidden");flip=new St.PageFlip($("book"),{width:w,height:h,size:"stretch",minWidth:260,maxWidth:1100,minHeight:340,maxHeight:1400,showCover:true,usePortrait:true,startPage:0,drawShadow:true,maxShadowOpacity:.35,flippingTime:850,mobileScrollSupport:false,autoSize:true});flip.loadFromHTML(pages);flip.on("flip",count);count();$("previous").onclick=()=>flip.flipPrev();$("next").onclick=()=>flip.flipNext();$("download").onclick=()=>{const a=document.createElement("a");a.href=pdfUrl;a.download=book.title+".pdf";a.click()};$("fullscreen").onclick=async()=>{try{if(!document.fullscreenElement)await $("reader").requestFullscreen();else await document.exitFullscreen()}catch(e){}};document.onkeydown=e=>{if(e.key==="ArrowLeft")flip.flipPrev();if(e.key==="ArrowRight")flip.flipNext()};document.title=book.title+" — Cardápio"}catch(e){fail(e.message||"Erro ao abrir o PDF.")}}run()})();
+(() => {
+  "use strict";
+
+  const show = (id) => document.getElementById(id).classList.remove("hidden");
+  const hide = (id) => document.getElementById(id).classList.add("hidden");
+  const slug = decodeURIComponent(location.pathname).replace(/^\/+|\/+$/g, "");
+
+  function driveDirectUrl(value) {
+    const url = String(value || "").trim();
+    const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*?id=)([a-zA-Z0-9_-]+)/);
+    if (match) return "https://drive.google.com/uc?export=download&id=" + match[1];
+    return url;
+  }
+
+  function error(message) {
+    hide("loading");
+    document.getElementById("error-message").textContent = message;
+    show("error");
+  }
+
+  function start() {
+    if (!slug) {
+      hide("loading");
+      show("empty");
+      return;
+    }
+
+    const book = window.CARDAPIO_BOOKS && window.CARDAPIO_BOOKS[slug];
+    if (!book || !book.url || book.url.includes("COLOCA_AQUI")) {
+      error("Este link não está configurado. Verifica o ficheiro books.js.");
+      return;
+    }
+
+    const source = driveDirectUrl(book.url);
+    const flipbook = document.getElementById("book_pdf");
+
+    document.title = (book.title || "Ebook") + " — Cardápio";
+    window.option_book_pdf = {
+      source,
+      webgl: true,
+      height: "100%",
+      showDownloadControl: false,
+      showPrintControl: false,
+      showSearchControl: false,
+      autoEnableThumbnail: false,
+      autoEnableOutline: false,
+      backgroundColor: "#101010",
+      forceFit: true
+    };
+
+    flipbook.setAttribute("source", source);
+
+    // DearFlip/jQuery initialize after these scripts are loaded.
+    window.addEventListener("load", () => {
+      window.setTimeout(() => {
+        hide("loading");
+        show("book-shell");
+        if (!window.DFLIP || !window.jQuery) {
+          error("Faltam os ficheiros do DearFlip. Adiciona a pasta oficial dflip/ ao repositório.");
+          return;
+        }
+      }, 900);
+    }, { once: true });
+  }
+
+  start();
+})();
