@@ -8,7 +8,6 @@
   },
   "dependencies": {
     "jszip": "3.10.1",
-    "page-flip": "2.0.7",
     "pdfjs-dist": "4.8.69",
     "pdf-lib": "1.17.1"
   },
