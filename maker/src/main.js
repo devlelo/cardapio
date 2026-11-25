@@ -2,11 +2,12 @@ import "./style.css";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import JSZip from "jszip";
+import { PDFDocument, PDFName, PDFString } from "pdf-lib";
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
 const $ = (id) => document.getElementById(id);
-const state = { pdf: null, pages: [], links: [], page: 1, zoom: 1, drawing: false, draft: null, addMode: false, fileName: "" };
+const state = { pdf: null, pages: [], links: [], page: 1, zoom: 1, drawing: false, draft: null, addMode: false, fileName: "", file: null };
 const els = {
   pdf: $("pdfInput"), drop: $("dropZone"), stage: $("pageStage"), canvas: $("pageCanvas"),
   overlay: $("linkOverlay"), draw: $("drawLayer"), viewport: $("pageViewport"),
@@ -24,7 +25,7 @@ function safeUrl(value) {
   } catch { return null; }
 }
 function setControls(enabled) {
-  ["exportBtn","addLinkBtn","prevBtn","nextBtn","zoomIn","zoomOut"].forEach((id) => $(id).disabled = !enabled);
+  ["exportBtn","previewBtn","addLinkBtn","prevBtn","nextBtn","zoomIn","zoomOut"].forEach((id) => $(id).disabled = !enabled);
 }
 function updateCounts() {
   $("pageCount").textContent = state.pages.length + (state.pages.length === 1 ? " página" : " páginas");
@@ -114,7 +115,7 @@ async function importPdf(file) {
   }
   setBusy(true); setControls(false);
   els.welcome.classList.add("hidden"); els.viewport.classList.add("hidden");
-  state.pages = []; state.links = []; state.page = 1; state.fileName = file.name;
+  state.pages = []; state.links = []; state.page = 1; state.fileName = file.name; state.file = file;
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
     const pdf = await getDocument({ data: bytes, isEvalSupported: false }).promise;
@@ -204,35 +205,82 @@ function downloadBlob(blob, name) {
   const a = document.createElement("a"); a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
+async function createLinkedPdf() {
+  if (!state.file) throw new Error("Importa novamente o PDF antes de exportar.");
+  const pdfDoc = await PDFDocument.load(await state.file.arrayBuffer(), { updateMetadata: false });
+  for (const item of state.links.filter((link) => link.source === "custom")) {
+    const page = pdfDoc.getPage(item.page - 1);
+    const { width, height } = page.getSize();
+    const rect = [item.x * width, height - (item.y + item.h) * height, (item.x + item.w) * width, height - item.y * height];
+    const annotation = pdfDoc.context.obj({
+      Type: PDFName.of("Annot"),
+      Subtype: PDFName.of("Link"),
+      Rect: rect,
+      Border: [0, 0, 0],
+      A: { Type: PDFName.of("Action"), S: PDFName.of("URI"), URI: PDFString.of(item.url) }
+    });
+    page.node.addAnnot(pdfDoc.context.register(annotation));
+  }
+  return new Uint8Array(await pdfDoc.save({ useObjectStreams: false }));
+}
+
+async function openPreview() {
+  if (!state.file) return;
+  const button = $("previewBtn");
+  button.disabled = true;
+  button.textContent = "A preparar…";
+  try {
+    const bytes = await createLinkedPdf();
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    const title = $("bookTitle").value.trim() || state.fileName.replace(/\.pdf$/i, "");
+    const target = "./standalone/index.html?pdf=" + encodeURIComponent(url) + "&title=" + encodeURIComponent(title);
+    const opened = window.open(target, "_blank");
+    if (!opened) {
+      URL.revokeObjectURL(url);
+      status("O navegador bloqueou a pré-visualização. Permite abrir separadores para este site.");
+    } else {
+      status("Pré-visualização aberta.");
+      setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+    }
+  } catch (error) {
+    console.error(error);
+    status("Não foi possível preparar a pré-visualização: " + error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Pré-visualizar";
+  }
+}
+
 async function exportBook() {
-  if (!state.pages.length) return;
-  const button = $("exportBtn"); button.disabled = true; button.textContent = "A preparar…";
+  if (!state.file) return;
+  const button = $("exportBtn");
+  button.disabled = true;
+  button.textContent = "A preparar…";
   try {
     const zip = new JSZip();
-    const pageData = [];
-    for (let i = 0; i < state.pages.length; i++) {
-      const page = state.pages[i];
-      const blob = await new Promise((resolve) => page.canvas.toBlob(resolve, "image/jpeg", .9));
-      const file = "pages/page-" + String(i + 1).padStart(3, "0") + ".jpg";
-      zip.file(file, blob);
-      pageData.push({ image: file, width: page.width, height: page.height, links: pageLinks(i + 1).map(({x,y,w,h,url,label}) => ({x,y,w,h,url,label})) });
+    const title = $("bookTitle").value.trim() || "Catálogo digital";
+    zip.file("book.pdf", await createLinkedPdf());
+    const files = ["index.html","reader.js","manifest.webmanifest","sw.js","ATTRIBUTION.md","pdf.mjs","pdf.worker.min.mjs","sdflip.min.js","sdflip.min.css","LICENSE-SdFlip","LICENSE-PDFjs"];
+    for (const file of files) {
+      const response = await fetch("./standalone/" + file);
+      if (!response.ok) throw new Error("Ficheiro de exportação em falta: " + file);
+      const content = file === "index.html" ? (await response.text()).replaceAll("Catálogo digital", escapeHtml(title)) : await response.blob();
+      zip.file(file, content);
     }
-    const runtimeResponse = await fetch("./runtime.js");
-    if (!runtimeResponse.ok) throw new Error("O motor offline não foi encontrado no build.");
-    zip.file("runtime.js", await runtimeResponse.text());
-    const title = $("bookTitle").value.trim() || "Flipbook";
-    const bg = $("bookBg").value;
-    const html = createExportHtml({ title, bg, pages: pageData });
-    zip.file("index.html", html);
-    zip.file("LE-ME.txt", "Flipbook offline\n\nAbre index.html num navegador moderno. Todos os ficheiros necessários estão incluídos. Os links externos (por exemplo WhatsApp) precisam de internet quando forem abertos.\n");
+    zip.file("LE-ME.txt", "CATÁLOGO FLIPBOOK\n\n1. Extrai todos os ficheiros para a mesma pasta.\n2. Publica a pasta num alojamento estático HTTPS (por exemplo Vercel).\n3. Abre o endereço no Android e usa Adicionar ao ecrã inicial para instalar como PWA.\n4. Depois da primeira abertura com internet, o leitor e o PDF ficam disponíveis offline, conforme o espaço de armazenamento do navegador.\n\nOs links externos, como WhatsApp, precisam de internet quando forem abertos.\nAbrir index.html por file:// não é suportado para módulos e workers; usa HTTPS/localhost e instala como PWA.\n");
     const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
     const safeName = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "flipbook";
     downloadBlob(blob, safeName + ".zip");
-    status("ZIP exportado. Extrai a pasta e abre index.html.");
+    status("ZIP exportado com leitor SdFlip, PDF e links incorporados.");
   } catch (error) {
-    console.error(error); status("Falha na exportação: " + error.message);
-  } finally { button.disabled = false; button.textContent = "Exportar ZIP"; }
+    console.error(error);
+    status("Falha na exportação: " + error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Exportar ZIP";
+  }
 }
+
 function createExportHtml(data) {
   const serialized = JSON.stringify(data).replace(/</g, "\\u003c");
   return `<!doctype html>
@@ -245,13 +293,14 @@ function createExportHtml(data) {
 
 $("welcomeUpload").addEventListener("click", () => els.pdf.click());
 els.pdf.addEventListener("change", (e) => importPdf(e.target.files?.[0]));
-$("resetBtn").addEventListener("click", () => { state.pdf = null; state.pages = []; state.links = []; state.page = 1; els.pdf.value = ""; els.viewport.classList.add("hidden"); els.welcome.classList.remove("hidden"); $("documentName").textContent = "Nenhum PDF importado"; setControls(false); updateCounts(); renderLinkList(); status("Novo projecto pronto."); });
+$("resetBtn").addEventListener("click", () => { state.pdf = null; state.file = null; state.pages = []; state.links = []; state.page = 1; els.pdf.value = ""; els.viewport.classList.add("hidden"); els.welcome.classList.remove("hidden"); $("documentName").textContent = "Nenhum PDF importado"; setControls(false); updateCounts(); renderLinkList(); status("Novo projecto pronto."); });
 $("addLinkBtn").addEventListener("click", () => { state.addMode = !state.addMode; $("addLinkBtn").classList.toggle("selected", state.addMode); els.stage.classList.toggle("drawing-mode", state.addMode); status(state.addMode ? "Arrasta sobre a página para desenhar a área clicável." : "Modo de seleção desactivado."); });
 $("prevBtn").addEventListener("click", () => showPage(state.page - 1));
 $("nextBtn").addEventListener("click", () => showPage(state.page + 1));
 $("zoomIn").addEventListener("click", () => { state.zoom = Math.min(1.5, state.zoom + .1); $("zoomLabel").textContent = Math.round(state.zoom*100)+"%"; showPage(state.page); });
 $("zoomOut").addEventListener("click", () => { state.zoom = Math.max(.6, state.zoom - .1); $("zoomLabel").textContent = Math.round(state.zoom*100)+"%"; showPage(state.page); });
 $("exportBtn").addEventListener("click", exportBook);
+$("previewBtn").addEventListener("click", openPreview);
 $("bookBg").addEventListener("input", (e) => { $("colorValue").textContent = e.target.value.toUpperCase(); });
 els.form.addEventListener("submit", (e) => { if (e.submitter?.value === "save") { e.preventDefault(); if (commitLink()) els.dialog.close(); } });
 els.dialog.addEventListener("close", () => { state.draft = null; });
