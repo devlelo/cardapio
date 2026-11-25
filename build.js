@@ -1,22 +1,28 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require("node:fs");
+const path = require("node:path");
+const { build } = require("vite");
 
 const root = process.cwd();
 const out = path.join(root, "dist");
 
-fs.rmSync(out, { recursive: true, force: true });
-fs.mkdirSync(out, { recursive: true });
+async function main() {
+  fs.rmSync(out, { recursive: true, force: true });
+  fs.mkdirSync(out, { recursive: true });
 
-for (const file of ["index.html", "style.css", "app.js", "books.js"]) {
-  fs.copyFileSync(path.join(root, file), path.join(out, file));
+  for (const file of ["index.html", "style.css", "app.js", "books.js"]) {
+    fs.copyFileSync(path.join(root, file), path.join(out, file));
+  }
+
+  const dflip = path.join(root, "dflip");
+  if (fs.existsSync(dflip)) fs.cpSync(dflip, path.join(out, "dflip"), { recursive: true });
+
+  await build({ configFile: path.join(root, "maker/vite.config.js") });
+  await build({ configFile: path.join(root, "maker/runtime.config.js") });
+
+  console.log("Build concluído: leitor existente + Maker em /maker/");
 }
 
-// DearFlip's official distribution folder is added by the project owner.
-// Keep its original internal structure so its relative assets continue working.
-const dflip = path.join(root, "dflip");
-if (fs.existsSync(dflip)) {
-  fs.cpSync(dflip, path.join(out, "dflip"), { recursive: true });
-}
-
-console.log("Cardápio build concluído.");
-console.log("DearFlip assets:", fs.existsSync(dflip) ? "encontrados" : "em falta — adicionar pasta dflip/");
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
