@@ -1,9 +1,13 @@
 {
-  "name": "cardapio-flipbook",
-  "version": "2.0.0",
+  "name": "cardapio-flipbook-maker",
+  "version": "3.0.0",
   "private": true,
-  "description": "Leitor direto de ebooks PDF com DearFlip.js.",
-  "scripts": {
-    "build": "node build.js"
-  }
+  "description": "Editor local de flipbooks responsivos com links e exportação offline.",
+  "scripts": { "build": "node build.js" },
+  "dependencies": {
+    "jszip": "3.10.1",
+    "page-flip": "2.0.7",
+    "pdfjs-dist": "4.8.69"
+  },
+  "devDependencies": { "vite": "6.0.7" }
 }
