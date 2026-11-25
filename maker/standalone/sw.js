@@ -15,7 +15,7 @@ self.addEventListener("fetch", event => {
       const response = await fetch(request);
       if (response.ok && (request.destination === "document" || request.url.endsWith(".pdf"))) {
         const cache = await caches.open(CACHE);
-        await cache.put(request, response.clone());
+        await cache.put(request, response.clone()).catch(() => {});
       }
       return response;
     } catch (error) {
