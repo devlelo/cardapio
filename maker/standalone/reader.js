@@ -52,11 +52,7 @@ async function openBook(pdfSource) {
       prefetch: false,
       sound: false,
       download: false,
-      background: "transparent",
-      pdfjs: {
-        src: "./pdflip/pdfjs/pdf.min.mjs",
-        workerSrc: "./pdflip/pdfjs/pdf.worker.min.mjs"
-      }
+      background: "transparent"
     });
 
     await book.ready;
