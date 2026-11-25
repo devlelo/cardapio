@@ -128,8 +128,8 @@ async function importPdf(file) {
       const canvas = document.createElement("canvas");
       canvas.width = Math.ceil(viewport.width);
       canvas.height = Math.ceil(viewport.height);
-      const context = canvas.getContext("2d", { alpha: false });
-      await pdfPage.render({ canvasContext: context, viewport }).promise;
+      const renderTask = pdfPage.render({ canvas, viewport, background: "#ffffff" });
+      await renderTask.promise;
       state.pages.push({ canvas, width: viewport.width, height: viewport.height });
       const annotations = await pdfPage.getAnnotations({ intent: "display" });
       for (const annotation of annotations) {
