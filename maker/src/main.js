@@ -47,7 +47,7 @@ function renderLinks() {
     a.style.width = item.w * 100 + "%";
     a.style.height = item.h * 100 + "%";
     a.innerHTML = '<span>' + escapeHtml(item.label) + '</span>';
-    a.addEventListener("click", (event) => { event.preventDefault(); status("Link: " + item.label + " — " + item.url); });
+    a.addEventListener("click", () => status("A abrir: " + item.label));
     els.overlay.appendChild(a);
   }
   renderLinkList();
@@ -90,7 +90,9 @@ function showPage(pageNo) {
   ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
   ctx.drawImage(page.canvas, 0, 0);
   els.stage.style.aspectRatio = page.width + " / " + page.height;
-  els.stage.style.width = Math.min(760 * state.zoom, window.innerWidth - 420) + "px";
+  const availableByWidth = Math.max(240, els.viewport.clientWidth - 24);
+  const availableByHeight = Math.max(240, els.viewport.clientHeight - 24) * (page.width / page.height);
+  els.stage.style.width = Math.min(760 * state.zoom, availableByWidth, availableByHeight) + "px";
   els.stage.style.maxWidth = "100%";
   $("pageIndicator").textContent = state.page + " / " + state.pages.length;
   $("prevBtn").disabled = state.page <= 1;
@@ -192,6 +194,7 @@ function commitLink() {
     url, label: els.label.value.trim() || "Abrir link", source: "custom"
   });
   state.draft = null; state.addMode = false;
+  els.stage.classList.remove("drawing-mode");
   $("addLinkBtn").classList.remove("selected");
   updateCounts(); renderLinks(); status("Link adicionado à página " + state.page + ".");
 }
