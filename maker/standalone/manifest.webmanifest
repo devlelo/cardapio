@@ -1,0 +1,10 @@
+{
+  "name": "Catálogo digital",
+  "short_name": "Catálogo",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101318",
+  "theme_color": "#101318"
+}
