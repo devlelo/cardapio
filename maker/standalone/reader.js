@@ -25,6 +25,23 @@ async function openBook(source, title) {
   status.textContent = "A preparar o livro…";
   try {
     const engine = await loadEngine();
+    engine.locales.pt = {
+      viewer: "Leitor de PDF", thumbs: "Miniaturas (T)", outline: "Índice", search: "Pesquisar texto",
+      close: "Fechar (Esc)", tabPages: "Páginas", tabOutline: "Índice", tabSearch: "Pesquisa",
+      first: "Primeira página (Home)", prev: "Anterior (seta esquerda)", next: "Seguinte (seta direita)",
+      last: "Última página (End)", pageNumber: "Número da página", zoomOut: "Diminuir zoom (−)",
+      zoomIn: "Aumentar zoom (+)", sound: "Som de virar página (S)", download: "Descarregar PDF",
+      print: "Imprimir", fullscreen: "Ecrã inteiro (F)", loading: "A carregar documento…",
+      preparing: "A preparar páginas…", errorTitle: "Não foi possível abrir o documento",
+      fileProtocol: "Abre este leitor através de HTTPS ou localhost, ou selecciona o PDF no dispositivo.",
+      openDirect: "Abrir ficheiro", call: "Ligar: ", mail: "Enviar e-mail: ", goTo: "Ir para",
+      outlineLoading: "A carregar…", noOutline: "Este ficheiro não tem índice.",
+      outlineError: "O índice não está disponível.", searchPlaceholder: "Pesquisar texto",
+      find: "Pesquisar", minChars: "Escreve pelo menos dois caracteres.",
+      searching: "A pesquisar… {n} de {total}", searchingFound: "A pesquisar… {n} de {total}, encontrados {found}",
+      found: "Páginas encontradas: {found}", notFound: "Não foram encontrados resultados.",
+      page: "Página {n}", pageOf: "Página {page} de {total}"
+    };
     engine.open({
       source,
       title: title || "Catálogo",
