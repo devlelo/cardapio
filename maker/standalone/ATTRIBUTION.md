@@ -1,9 +1,9 @@
 # Créditos e licenças
 
-O leitor utiliza **SdFlip 1.0.0**, de Pandaren, licenciado sob MIT.
-Repositório original: https://github.com/Pandarens/SdFlip
+O leitor utiliza **pdflip 0.1.0**, de WapplerSystems, licenciado sob BSD-3-Clause.
+Repositório: https://github.com/WapplerSystems/pdflip
 
-O motor de PDF utiliza **PDF.js**, da Mozilla, licenciado sob Apache-2.0.
+O pdflip utiliza **PDF.js**, da Mozilla, licenciado sob Apache-2.0.
 Repositório: https://github.com/mozilla/pdf.js
 
-Os ficheiros de licença de cada biblioteca devem acompanhar esta distribuição.
+Os ficheiros originais de licença das bibliotecas acompanham a pasta `pdflip/` no pacote exportado.
