@@ -30,7 +30,6 @@ async function main() {
   if (fs.existsSync(dflip)) fs.cpSync(dflip, path.join(out, "dflip"), { recursive: true });
 
   await build({ configFile: path.join(root, "maker/vite.config.js") });
-  await build({ configFile: path.join(root, "maker/runtime.config.js") });
 
   console.log("Build concluído: leitor existente + Maker em /maker/");
 }
