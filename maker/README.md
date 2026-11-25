@@ -1,38 +1,51 @@
 # Flipbook Maker
 
-Editor local de PDFs para criar flipbooks com efeito de folha, links clicáveis e exportação ZIP offline.
+Editor de PDF com pré-visualização de livro em ecrã inteiro, curvatura realista de página, links clicáveis e exportação de pacote autónomo.
 
-## Requisitos
-- Node.js 20 ou superior
-- npm
+## Motor do leitor
+
+O leitor utiliza **SdFlip 1.0.0** (MIT), incorporado localmente em `vendor/sdflip/`. O motor oferece:
+- página única em ecrãs verticais e dupla página em ecrãs largos;
+- curvatura de papel com sombras;
+- gestos de toque, zoom e ecrã inteiro;
+- links externos e internos do PDF;
+- pesquisa, índice e miniaturas;
+- cache de páginas para reduzir consumo de memória.
+
+O PDF.js é servido localmente a partir da dependência `pdfjs-dist`; não é carregado de CDN.
 
 ## Desenvolvimento
+
+Requer Node.js 20 ou superior.
+
 ```bash
 npm install
 npm run build
 ```
 
-O editor é publicado em `/maker/`. O leitor de flipbook continua disponível nas rotas antigas do projecto.
+O editor é publicado em `/maker/`. A página do leitor standalone fica em `/maker/standalone/`.
 
-## Utilização
-1. Abre `/maker/`.
-2. Importa um PDF.
-3. Selecciona **Adicionar link** e desenha uma área sobre a página.
-4. Introduz o texto e o URL (por exemplo `https://wa.me/244923000000`).
-5. Exporta o ZIP.
-6. Extrai o ZIP e abre `index.html`.
+## Fluxo de utilização
 
-## Privacidade e modo offline
-O PDF é lido no navegador. O editor não envia documentos para servidores nem utiliza base de dados. O ZIP contém as páginas renderizadas, os links, o motor PageFlip e o HTML do leitor. O catálogo abre sem internet; links externos precisam de ligação à internet quando forem utilizados.
+1. Abre `/maker/` e importa o PDF.
+2. Se quiseres, desenha áreas clicáveis para links personalizados, como WhatsApp.
+3. Usa **Pré-visualizar** para abrir o leitor de papel em ecrã inteiro.
+4. Usa **Exportar ZIP** para gerar um pacote com PDF, links, motor, PDF.js e PWA.
+5. Extrai o ZIP e publica os ficheiros na mesma pasta num alojamento HTTPS, como Vercel.
+6. No Android, abre o endereço e escolhe **Adicionar ao ecrã inicial**. Depois da primeira abertura, o service worker guarda o leitor e o PDF para utilização offline, sujeito ao espaço disponível no dispositivo.
 
-## Limitações conhecidas
-- PDFs protegidos por palavra-passe não são suportados.
-- A primeira versão preserva hiperligações externas do PDF. Destinos internos do tipo “ir para página” ainda não são convertidos.
-- O tamanho do ZIP depende do número de páginas e da resolução das imagens.
-- O APK não é gerado por esta ferramenta; o ZIP HTML pode ser empacotado separadamente numa aplicação Android.
+## Privacidade e limitações
 
-## Bibliotecas
-- PDF.js — Apache-2.0
-- StPageFlip / page-flip — MIT
-- JSZip — MIT
-- Vite — MIT
+- O PDF é processado localmente no navegador.
+- Não existe backend nem base de dados.
+- As ligações personalizadas são gravadas como anotações URI dentro do PDF exportado.
+- Os links externos precisam de internet quando são abertos.
+- O modo offline é feito por PWA em HTTPS/localhost. Abrir directamente por `file://` não é suportado de forma fiável pelos navegadores Android, devido às regras de módulos e workers.
+- PDFs protegidos por palavra-passe, ficheiros danificados ou PDFs muito pesados podem exigir tratamento específico.
+
+## Licenças
+
+- SdFlip — MIT; ver `vendor/sdflip/LICENSE`.
+- PDF.js — Apache-2.0; ver `standalone/LICENSE-PDFjs` no pacote exportado.
+- pdf-lib — MIT.
+- JSZip — MIT.
