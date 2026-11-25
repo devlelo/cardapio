@@ -1,19 +1,34 @@
-const CACHE = "flipbook-reader-v1";
-const CORE = ["./", "./index.html", "./reader.js", "./pdf.mjs", "./pdf.worker.min.mjs", "./sdflip.min.js", "./sdflip.min.css", "./manifest.webmanifest"];
+const CACHE = "pdflip-reader-v1";
+const CORE = ["./", "./index.html", "./reader.js", "./manifest.webmanifest", "./pdflip-assets.json"];
+
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await cache.addAll(CORE);
+    const response = await fetch("./pdflip-assets.json");
+    const assets = await response.json();
+    await cache.addAll(assets.map(path => "./pdflip/" + path));
+    await self.skipWaiting();
+  })());
 });
+
 self.addEventListener("activate", event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()));
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
+  );
 });
+
 self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
-  event.respondWith(caches.match(request).then(async cached => {
+  event.respondWith((async () => {
+    const cached = await caches.match(request);
     if (cached) return cached;
     try {
       const response = await fetch(request);
-      if (response.ok && (request.destination === "document" || request.url.endsWith(".pdf"))) {
+      if (response.ok && new URL(request.url).pathname.toLowerCase().endsWith(".pdf")) {
         const cache = await caches.open(CACHE);
         await cache.put(request, response.clone()).catch(() => {});
       }
@@ -22,5 +37,5 @@ self.addEventListener("fetch", event => {
       if (cached) return cached;
       throw error;
     }
-  }));
+  })());
 });
