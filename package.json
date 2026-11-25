@@ -1,14 +1,18 @@
 {
   "name": "cardapio-flipbook-maker",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "private": true,
   "description": "Editor local de flipbooks responsivos com links e exportação offline.",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node build.js"
   },
   "dependencies": {
+    "@wapplersystems/pdflip": "0.1.0",
     "jszip": "3.10.1",
-    "pdfjs-dist": "4.8.69",
+    "pdfjs-dist": "6.4.299",
     "pdf-lib": "1.17.1"
   },
   "devDependencies": {
