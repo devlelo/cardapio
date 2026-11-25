@@ -43,9 +43,9 @@ Para adicionar um ebook, edita books.js e cria uma entrada com slug, título e U
 
 ~~~js
 window.CARDAPIO_BOOKS = {
-  menu-restaurante: {
-    title: Menu do Restaurante,
-    url: https://exemplo.com/menu.pdf
+  "menu-restaurante": {
+    title: "Menu do Restaurante",
+    url: "https://exemplo.com/menu.pdf"
   }
 };
 ~~~
