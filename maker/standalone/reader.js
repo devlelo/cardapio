@@ -1,102 +1,89 @@
-import * as pdfjsLib from "./pdf.mjs";
-
 const status = document.getElementById("readerStatus");
 const fileInput = document.getElementById("pdfFile");
+const uploadPanel = document.getElementById("uploadPanel");
+const uploadMessage = document.getElementById("uploadMessage");
+const bookElement = document.getElementById("book");
+const titleElement = document.getElementById("readerTitle");
+const params = new URLSearchParams(location.search);
+const title = params.get("title") || "Catálogo digital";
+const source = params.get("pdf") || "./book.pdf";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("./pdf.worker.min.mjs", import.meta.url).href;
-window.pdfjsLib = pdfjsLib;
-window.SdFlipConfig = {
-  pdfjs: "",
-  pdfjsWorker: new URL("./pdf.worker.min.mjs", import.meta.url).href
-};
+document.title = title + " — Catálogo digital";
+titleElement.textContent = title;
+
+let book = null;
+let enginePromise;
 
 function loadEngine() {
-  return new Promise((resolve, reject) => {
-    if (window.SdFlip) return resolve(window.SdFlip);
+  if (window.Pdflip) return Promise.resolve(window.Pdflip);
+  if (enginePromise) return enginePromise;
+  enginePromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = new URL("./sdflip.min.js", import.meta.url).href;
-    script.onload = () => window.SdFlip ? resolve(window.SdFlip) : reject(new Error("Motor de viragem não carregou."));
-    script.onerror = () => reject(new Error("Não foi possível carregar o motor de viragem."));
+    script.src = "./pdflip/pdflip.global.js";
+    script.onload = () => window.Pdflip ? resolve(window.Pdflip) : reject(new Error("O motor pdflip não foi carregado."));
+    script.onerror = () => reject(new Error("Não foi possível carregar o motor pdflip."));
     document.head.appendChild(script);
   });
+  return enginePromise;
 }
 
-async function openBook(source, title) {
-  status.textContent = "A preparar o livro…";
+async function openBook(pdfSource) {
+  status.hidden = false;
+  status.textContent = "A preparar as páginas do catálogo…";
+  uploadPanel.hidden = true;
   try {
     const engine = await loadEngine();
-    engine.locales.pt = {
-      viewer: "Leitor de PDF", thumbs: "Miniaturas (T)", outline: "Índice", search: "Pesquisar texto",
-      close: "Fechar (Esc)", tabPages: "Páginas", tabOutline: "Índice", tabSearch: "Pesquisa",
-      first: "Primeira página (Home)", prev: "Anterior (seta esquerda)", next: "Seguinte (seta direita)",
-      last: "Última página (End)", pageNumber: "Número da página", zoomOut: "Diminuir zoom (−)",
-      zoomIn: "Aumentar zoom (+)", sound: "Som de virar página (S)", download: "Descarregar PDF",
-      print: "Imprimir", fullscreen: "Ecrã inteiro (F)", loading: "A carregar documento…",
-      preparing: "A preparar páginas…", errorTitle: "Não foi possível abrir o documento",
-      fileProtocol: "Abre este leitor através de HTTPS ou localhost, ou selecciona o PDF no dispositivo.",
-      openDirect: "Abrir ficheiro", call: "Ligar: ", mail: "Enviar e-mail: ", goTo: "Ir para",
-      outlineLoading: "A carregar…", noOutline: "Este ficheiro não tem índice.",
-      outlineError: "O índice não está disponível.", searchPlaceholder: "Pesquisar texto",
-      find: "Pesquisar", minChars: "Escreve pelo menos dois caracteres.",
-      searching: "A pesquisar… {n} de {total}", searchingFound: "A pesquisar… {n} de {total}, encontrados {found}",
-      found: "Páginas encontradas: {found}", notFound: "Não foram encontrados resultados.",
-      page: "Página {n}", pageOf: "Página {page} de {total}"
-    };
-    engine.open({
-      source,
-      title: title || "Catálogo",
-      layout: "auto",
-      links: true,
-      fullscreen: true,
-      print: true,
-      download: true,
-      thumbs: true,
-      outline: true,
-      search: true,
-      sound: true,
-      duration: 850,
-      lang: "pt",
-      onReady: () => { status.textContent = ""; },
-      onError: (error) => {
-        status.textContent = "Não foi possível abrir o PDF: " + (error?.message || "erro desconhecido");
-      }
-    });
-  } catch (error) {
-    status.textContent = error.message || "Erro ao abrir o livro.";
-    console.error(error);
-  }
-}
-
-async function start() {
-  const params = new URLSearchParams(location.search);
-  const pdfPath = params.get("pdf") || "./book.pdf";
-  const title = params.get("title") || document.title;
-  try {
-    status.textContent = "A carregar o catálogo…";
-    const response = await fetch(pdfPath);
+    const response = await fetch(pdfSource);
     if (!response.ok) throw new Error("PDF não encontrado (" + response.status + ").");
     const bytes = new Uint8Array(await response.arrayBuffer());
-    await openBook(bytes, title);
+
+    if (book) book.destroy();
+    book = new engine.Flipbook(bookElement, {
+      source: bytes,
+      pageMode: "auto",
+      flipStyle: "soft",
+      duration: 760,
+      controls: ["first", "prev", "pageNumber", "next", "last", "thumbnails", "outline", "search", "zoomIn", "zoomOut", "pageMode", "fullscreen"],
+      controlsPosition: "bottom",
+      links: true,
+      linkTarget: "_blank",
+      textLayer: true,
+      lazy: false,
+      prefetch: false,
+      sound: false,
+      download: false,
+      background: "transparent",
+      pdfjs: {
+        src: "./pdflip/pdfjs/pdf.min.mjs",
+        workerSrc: "./pdflip/pdfjs/pdf.worker.min.mjs"
+      }
+    });
+
+    await book.ready;
+    status.hidden = true;
   } catch (error) {
-    status.textContent = "Escolhe o PDF para abrir o flipbook. " + error.message;
-    document.getElementById("uploadPanel").hidden = false;
+    console.error(error);
+    status.hidden = true;
+    uploadMessage.textContent = error.message || "O documento não pôde ser aberto.";
+    uploadPanel.hidden = false;
   }
 }
 
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files?.[0];
-  if (file) await openBook(file, file.name.replace(/\\.pdf$/i, ""));
+  if (file) await openBook(URL.createObjectURL(file));
 });
 
 async function boot() {
-  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
     try {
       await navigator.serviceWorker.register("./sw.js");
       await navigator.serviceWorker.ready;
     } catch (error) {
-      console.warn("Service worker indisponível:", error);
+      console.warn("Cache offline indisponível:", error);
     }
   }
-  start();
+  await openBook(source);
 }
+
 boot();
