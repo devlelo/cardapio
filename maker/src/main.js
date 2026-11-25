@@ -227,6 +227,11 @@ async function createLinkedPdf() {
 async function openPreview() {
   if (!state.file) return;
   const button = $("previewBtn");
+  const previewWindow = window.open("about:blank", "_blank");
+  if (!previewWindow) {
+    status("O navegador bloqueou a pré-visualização. Permite abrir separadores para este site.");
+    return;
+  }
   button.disabled = true;
   button.textContent = "A preparar…";
   try {
@@ -234,15 +239,11 @@ async function openPreview() {
     const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
     const title = $("bookTitle").value.trim() || state.fileName.replace(/\.pdf$/i, "");
     const target = "./standalone/index.html?pdf=" + encodeURIComponent(url) + "&title=" + encodeURIComponent(title);
-    const opened = window.open(target, "_blank");
-    if (!opened) {
-      URL.revokeObjectURL(url);
-      status("O navegador bloqueou a pré-visualização. Permite abrir separadores para este site.");
-    } else {
-      status("Pré-visualização aberta.");
-      setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
-    }
+    previewWindow.location.replace(target);
+    status("Pré-visualização aberta.");
+    setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
   } catch (error) {
+    previewWindow.close();
     console.error(error);
     status("Não foi possível preparar a pré-visualização: " + error.message);
   } finally {
