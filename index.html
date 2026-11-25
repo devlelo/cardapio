@@ -6,27 +6,33 @@
   <meta name="theme-color" content="#101010">
   <title>Cardápio</title>
   <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/dflip/css/dflip.min.css">
 </head>
 <body>
-  <main id="reader" class="reader">
+  <main class="reader">
     <div id="loading" class="status"><span class="spinner"></span><p>A preparar o ebook…</p></div>
-    <div id="error" class="status hidden">
-      <h1>Não foi possível abrir este ebook</h1>
+    <section id="error" class="status hidden">
+      <h1>Não foi possível abrir o ebook</h1>
       <p id="error-message"></p>
-    </div>
-    <div id="empty" class="status hidden">
+    </section>
+    <section id="empty" class="status hidden">
       <h1>Cardápio</h1>
-      <p>Adiciona o endereço do teu PDF no ficheiro <code>books.js</code> e abre o link correspondente.</p>
-    </div>
-    <section id="book-shell" class="book-shell">
-      <div class="_df_book" id="book_pdf"></div>
+      <p>Adiciona um ebook no ficheiro books.js e abre o respetivo endereço.</p>
+    </section>
+    <section id="flipbook-area" class="flipbook-area hidden">
+      <header class="toolbar">
+        <button id="prev" type="button" aria-label="Página anterior">‹</button>
+        <span id="page-indicator">—</span>
+        <button id="next" type="button" aria-label="Página seguinte">›</button>
+        <button id="fullscreen" type="button">Ecrã inteiro</button>
+      </header>
+      <div id="flipbook" class="flipbook"></div>
+    </section>
+    <section id="drive-fallback" class="drive-fallback hidden">
+      <iframe id="drive-frame" title="Pré-visualização do ebook" allow="autoplay"></iframe>
+      <a id="open-drive" target="_blank" rel="noopener">Abrir PDF no Google Drive</a>
     </section>
   </main>
-
   <script src="/books.js"></script>
   <script src="/app.js"></script>
-  <script src="/dflip/js/libs/jquery.min.js"></script>
-  <script src="/dflip/js/dflip.min.js"></script>
 </body>
 </html>
