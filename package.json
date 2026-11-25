@@ -3,11 +3,16 @@
   "version": "3.0.0",
   "private": true,
   "description": "Editor local de flipbooks responsivos com links e exportação offline.",
-  "scripts": { "build": "node build.js" },
+  "scripts": {
+    "build": "node build.js"
+  },
   "dependencies": {
     "jszip": "3.10.1",
     "page-flip": "2.0.7",
-    "pdfjs-dist": "4.8.69"
+    "pdfjs-dist": "4.8.69",
+    "pdf-lib": "1.17.1"
   },
-  "devDependencies": { "vite": "6.4.6" }
+  "devDependencies": {
+    "vite": "6.4.6"
+  }
 }
