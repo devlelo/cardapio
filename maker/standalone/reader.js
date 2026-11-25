@@ -4,7 +4,6 @@ const status = document.getElementById("readerStatus");
 const fileInput = document.getElementById("pdfFile");
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("./pdf.worker.min.mjs", import.meta.url).href;
-pdfjsLib.GlobalWorkerOptions.isEvalSupported = false;
 window.pdfjsLib = pdfjsLib;
 window.SdFlipConfig = {
   pdfjs: "",
@@ -72,7 +71,15 @@ fileInput.addEventListener("change", async () => {
   if (file) await openBook(file, file.name.replace(/\\.pdf$/i, ""));
 });
 
-if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.warn));
+async function boot() {
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    try {
+      await navigator.serviceWorker.register("./sw.js");
+      await navigator.serviceWorker.ready;
+    } catch (error) {
+      console.warn("Service worker indisponível:", error);
+    }
+  }
+  start();
 }
-start();
+boot();
