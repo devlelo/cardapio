@@ -280,16 +280,6 @@ async function exportBook() {
   }
 }
 
-function createExportHtml(data) {
-  const serialized = JSON.stringify(data).replace(/</g, "\\u003c");
-  return `<!doctype html>
-<html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="${data.bg}"><title>${escapeHtml(data.title)}</title>
-<style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:${data.bg};font-family:system-ui,sans-serif}.reader{height:100dvh;display:flex;flex-direction:column}.bar{height:52px;flex:none;display:flex;align-items:center;justify-content:center;gap:16px;color:#fff;background:#0003}.bar button{border:0;border-radius:6px;background:#ffffff20;color:#fff;padding:8px 14px;font-size:18px}.count{font-size:13px;min-width:65px;text-align:center}.book-area{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:12px}.flipbook{margin:auto}.page{position:relative;background:white;overflow:hidden}.page img{display:block;width:100%;height:100%;object-fit:fill}.hotspot{position:absolute;display:block;z-index:4;cursor:pointer;background:transparent}.hotspot:focus-visible{outline:3px solid #f5c542;outline-offset:1px}.hotspot:hover{background:#ffffff22}.hint{color:#ffffff80;text-align:center;font-size:11px;padding:4px}@media(max-width:600px){.bar{height:46px}.book-area{padding:6px}}
-</style></head><body><main class="reader"><nav class="bar"><button id="prev" aria-label="Página anterior">‹</button><span class="count" id="count"></span><button id="next" aria-label="Página seguinte">›</button><button id="full">⛶</button></nav><section class="book-area"><div id="book" class="flipbook"></div></section><div class="hint">${escapeHtml(data.title)}</div></main>
-<script>window.FLIPBOOK_DATA=${serialized};</script><script src="./runtime.js"></script><script>window.FlipbookRuntime.start();</script></body></html>`;
-}
-
 $("welcomeUpload").addEventListener("click", () => els.pdf.click());
 els.pdf.addEventListener("change", (e) => importPdf(e.target.files?.[0]));
 $("resetBtn").addEventListener("click", () => { state.pdf = null; state.file = null; state.pages = []; state.links = []; state.page = 1; els.pdf.value = ""; els.viewport.classList.add("hidden"); els.welcome.classList.remove("hidden"); $("documentName").textContent = "Nenhum PDF importado"; setControls(false); updateCounts(); renderLinkList(); status("Novo projecto pronto."); });
