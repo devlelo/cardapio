@@ -1,67 +1,142 @@
 (() => {
   "use strict";
 
-  const show = (id) => document.getElementById(id).classList.remove("hidden");
-  const hide = (id) => document.getElementById(id).classList.add("hidden");
-  const slug = decodeURIComponent(location.pathname).replace(/^\/+|\/+$/g, "");
+  const $ = (id) => document.getElementById(id);
+  const slug = decodeURIComponent(location.pathname).replace(/^\\/+|\\/+$/g, "");
 
-  function driveDirectUrl(value) {
+  function state(id) {
+    ["loading","error","empty","flipbook-area","drive-fallback"].forEach((key) => $(key).classList.add("hidden"));
+    if (id) $(id).classList.remove("hidden");
+  }
+
+  function driveInfo(value) {
     const url = String(value || "").trim();
-    const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*?id=)([a-zA-Z0-9_-]+)/);
-    if (match) return "https://drive.google.com/uc?export=download&id=" + match[1];
-    return url;
+    const match = url.match(/drive\\.google\\.com\\/(?:file\\/d\\/|open\\?id=|uc\\?.*?id=)([a-zA-Z0-9_-]+)/);
+    if (!match) return { pdfUrl: url, previewUrl: url, isDrive: false };
+    const id = match[1];
+    return {
+      pdfUrl: "https://drive.google.com/uc?export=download&id=" + id,
+      previewUrl: "https://drive.google.com/file/d/" + id + "/preview",
+      isDrive: true
+    };
   }
 
-  function error(message) {
-    hide("loading");
-    hide("book-shell");
-    document.getElementById("error-message").textContent = message;
-    show("error");
+  function showError(message) {
+    $("error-message").textContent = message;
+    state("error");
   }
 
-  function start() {
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("Não foi possível carregar uma biblioteca necessária."));
+      document.head.appendChild(script);
+    });
+  }
+
+  function fallback(info) {
+    if (!info.isDrive) {
+      showError("Não foi possível ler o PDF. Confirma se o endereço está público e aponta diretamente para um ficheiro PDF.");
+      return;
+    }
+    $("drive-frame").src = info.previewUrl;
+    $("open-drive").href = info.previewUrl;
+    state("drive-fallback");
+  }
+
+  async function start() {
     if (!slug) {
-      hide("loading");
-      show("empty");
+      state("empty");
       return;
     }
 
     const book = window.CARDAPIO_BOOKS && window.CARDAPIO_BOOKS[slug];
     if (!book || !book.url || book.url.includes("COLOCA_AQUI")) {
-      error("Este link não está configurado. Verifica o ficheiro books.js.");
+      showError("Este ebook não está configurado no ficheiro books.js.");
       return;
     }
 
-    const source = driveDirectUrl(book.url);
-    const flipbook = document.getElementById("book_pdf");
-
     document.title = (book.title || "Ebook") + " — Cardápio";
-    window.option_book_pdf = {
-      source,
-      webgl: true,
-      height: "100%",
-      showDownloadControl: false,
-      showPrintControl: false,
-      showSearchControl: false,
-      autoEnableThumbnail: false,
-      autoEnableOutline: false,
-      backgroundColor: "#101010",
-      forceFit: true
-    };
+    const info = driveInfo(book.url);
 
-    flipbook.setAttribute("source", source);
+    try {
+      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+      await loadScript("https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js");
 
-    // DearFlip/jQuery initialize after these scripts are loaded.
-    window.addEventListener("load", () => {
-      window.setTimeout(() => {
-        hide("loading");
-        show("book-shell");
-        if (!window.DFLIP || !window.jQuery) {
-          error("Faltam os ficheiros do DearFlip. Adiciona a pasta oficial dflip/ ao repositório.");
-          return;
-        }
-      }, 900);
-    }, { once: true });
+      if (!window.pdfjsLib || !window.St || !window.St.PageFlip) {
+        throw new Error("As bibliotecas do leitor não foram carregadas.");
+      }
+
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+      const pdf = await window.pdfjsLib.getDocument({
+        url: info.pdfUrl,
+        disableAutoFetch: false,
+        disableStream: false,
+        rangeChunkSize: 65536
+      }).promise;
+
+      const host = $("flipbook");
+      const pages = [];
+      const width = 900;
+      const height = 1200;
+
+      for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+        const pdfPage = await pdf.getPage(pageNo);
+        const base = pdfPage.getViewport({ scale: 1 });
+        const scale = Math.min(width / base.width, height / base.height);
+        const viewport = pdfPage.getViewport({ scale });
+        const page = document.createElement("div");
+        page.className = "page";
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d", { alpha: false });
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        page.appendChild(canvas);
+        await pdfPage.render({ canvasContext: context, viewport }).promise;
+        host.appendChild(page);
+        pages.push(page);
+      }
+
+      const pageFlip = new window.St.PageFlip(host, {
+        width,
+        height,
+        size: "stretch",
+        minWidth: 280,
+        maxWidth: 1200,
+        minHeight: 380,
+        maxHeight: 1600,
+        maxShadowOpacity: 0.35,
+        showCover: true,
+        mobileScrollSupport: false,
+        usePortrait: true
+      });
+
+      pageFlip.loadFromHTML(pages);
+      $("page-indicator").textContent = "1 / " + pdf.numPages;
+      pageFlip.on("flip", (event) => {
+        $("page-indicator").textContent = (event.data + 1) + " / " + pdf.numPages;
+      });
+      $("prev").addEventListener("click", () => pageFlip.flipPrev());
+      $("next").addEventListener("click", () => pageFlip.flipNext());
+      $("fullscreen").addEventListener("click", () => {
+        const area = $("flipbook-area");
+        if (!document.fullscreenElement) area.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowLeft") pageFlip.flipPrev();
+        if (event.key === "ArrowRight") pageFlip.flipNext();
+      });
+
+      state("flipbook-area");
+    } catch (err) {
+      console.error("Cardápio reader:", err);
+      fallback(info);
+    }
   }
 
   start();
