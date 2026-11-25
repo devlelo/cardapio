@@ -247,18 +247,30 @@ async function exportBook() {
     const zip = new JSZip();
     const title = $("bookTitle").value.trim() || "Catálogo digital";
     zip.file("book.pdf", await createLinkedPdf());
-    const files = ["index.html","reader.js","manifest.webmanifest","sw.js","ATTRIBUTION.md","pdf.mjs","pdf.worker.min.mjs","sdflip.min.js","sdflip.min.css","LICENSE-SdFlip","LICENSE-PDFjs"];
+    const files = ["index.html","reader.js","manifest.webmanifest","sw.js","ATTRIBUTION.md","pdflip-assets.json","LICENSE-pdflip"];
+    let pdflipAssets = [];
     for (const file of files) {
       const response = await fetch("./standalone/" + file);
       if (!response.ok) throw new Error("Ficheiro de exportação em falta: " + file);
-      const content = file === "index.html" ? (await response.text()).replaceAll("Catálogo digital", escapeHtml(title)) : await response.blob();
-      zip.file(file, content);
+      if (file === "index.html") {
+        zip.file(file, (await response.text()).replaceAll("Catálogo digital", escapeHtml(title)));
+      } else if (file === "pdflip-assets.json") {
+        pdflipAssets = await response.json();
+        zip.file(file, JSON.stringify(pdflipAssets, null, 2));
+      } else {
+        zip.file(file, await response.blob());
+      }
+    }
+    for (const asset of pdflipAssets) {
+      const response = await fetch("./standalone/pdflip/" + asset);
+      if (!response.ok) throw new Error("Asset do pdflip em falta: " + asset);
+      zip.file("pdflip/" + asset, await response.blob());
     }
     zip.file("LE-ME.txt", "CATÁLOGO FLIPBOOK\n\n1. Extrai todos os ficheiros para a mesma pasta.\n2. Publica a pasta num alojamento estático HTTPS (por exemplo Vercel).\n3. Abre o endereço no Android e usa Adicionar ao ecrã inicial para instalar como PWA.\n4. Depois da primeira abertura com internet, o leitor e o PDF ficam disponíveis offline, conforme o espaço de armazenamento do navegador.\n\nOs links externos, como WhatsApp, precisam de internet quando forem abertos.\nAbrir index.html por file:// não é suportado para módulos e workers; usa HTTPS/localhost e instala como PWA.\n");
     const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
     const safeName = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "flipbook";
     downloadBlob(blob, safeName + ".zip");
-    status("ZIP exportado com leitor SdFlip, PDF e links incorporados.");
+    status("ZIP exportado com leitor pdflip, PDF e links incorporados.");
   } catch (error) {
     console.error(error);
     status("Falha na exportação: " + error.message);
