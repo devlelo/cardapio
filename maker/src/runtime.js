@@ -1,6 +1,25 @@
 import { PageFlip } from "page-flip";
 
+function installPageFlipStyles() {
+  const style = document.createElement("style");
+  style.textContent = `
+    .stf__parent{position:relative;display:block;box-sizing:border-box;transform:translateZ(0);touch-action:pan-y}
+    .sft__wrapper{position:relative;width:100%;box-sizing:border-box}
+    .stf__parent canvas{position:absolute;width:100%;height:100%;left:0;top:0}
+    .stf__block{position:absolute;width:100%;height:100%;box-sizing:border-box;perspective:2000px}
+    .stf__item{display:none;position:absolute;transform-style:preserve-3d}
+    .stf__outerShadow,.stf__innerShadow,.stf__hardShadow,.stf__hardInnerShadow{position:absolute;left:0;top:0}
+    .page{position:relative;width:100%;height:100%;overflow:hidden;background:#fff}
+    .page>img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none}
+    .hotspot{position:absolute;display:block;z-index:5;background:transparent;cursor:pointer}
+    .hotspot:focus-visible{outline:3px solid #f5c542;outline-offset:1px}
+    .hotspot:hover{background:#ffffff20}
+  `;
+  document.head.appendChild(style);
+}
+
 function start() {
+  installPageFlipStyles();
   const data = window.FLIPBOOK_DATA;
   const host = document.getElementById("book");
   const count = document.getElementById("count");
