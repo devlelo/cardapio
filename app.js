@@ -2,7 +2,7 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const slug = decodeURIComponent(location.pathname).replace(/^\\/+|\\/+$/g, "");
+  const slug = decodeURIComponent(location.pathname).replace(/^\/+|\/+$/g, "");
 
   function state(id) {
     ["loading","error","empty","flipbook-area","drive-fallback"].forEach((key) => $(key).classList.add("hidden"));
@@ -11,7 +11,7 @@
 
   function driveInfo(value) {
     const url = String(value || "").trim();
-    const match = url.match(/drive\\.google\\.com\\/(?:file\\/d\\/|open\\?id=|uc\\?.*?id=)([a-zA-Z0-9_-]+)/);
+    const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*?id=)([a-zA-Z0-9_-]+)/);
     if (!match) return { pdfUrl: url, previewUrl: url, isDrive: false };
     const id = match[1];
     return {
