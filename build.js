@@ -17,21 +17,33 @@ async function main() {
   const standaloneOut = path.join(out, "maker/standalone");
   fs.mkdirSync(standaloneOut, { recursive: true });
   fs.cpSync(standaloneSource, standaloneOut, { recursive: true });
-  fs.copyFileSync(path.join(root, "maker/vendor/sdflip/sdflip.min.js"), path.join(standaloneOut, "sdflip.min.js"));
-  fs.copyFileSync(path.join(root, "maker/vendor/sdflip/sdflip.min.css"), path.join(standaloneOut, "sdflip.min.css"));
-  fs.copyFileSync(path.join(root, "maker/vendor/sdflip/LICENSE"), path.join(standaloneOut, "LICENSE-SdFlip"));
-  const pdfjsBuild = path.join(root, "node_modules/pdfjs-dist/build");
-  fs.copyFileSync(path.join(pdfjsBuild, "pdf.mjs"), path.join(standaloneOut, "pdf.mjs"));
-  fs.copyFileSync(path.join(pdfjsBuild, "pdf.worker.min.mjs"), path.join(standaloneOut, "pdf.worker.min.mjs"));
-  const pdfjsLicense = path.join(root, "node_modules/pdfjs-dist", "LICENSE");
-  if (fs.existsSync(pdfjsLicense)) fs.copyFileSync(pdfjsLicense, path.join(standaloneOut, "LICENSE-PDFjs"));
+
+  // Vendor the complete pdflip runtime, including PDF.js workers, CMaps and WASM.
+  const pdflipDist = path.join(root, "node_modules/@wapplersystems/pdflip/dist");
+  if (!fs.existsSync(pdflipDist)) throw new Error("Runtime pdflip não encontrado. Executa npm install.");
+  const pdflipOut = path.join(standaloneOut, "pdflip");
+  fs.cpSync(pdflipDist, pdflipOut, { recursive: true });
+  const pdflipLicense = path.join(root, "node_modules/@wapplersystems/pdflip/LICENSE");
+  if (fs.existsSync(pdflipLicense)) fs.copyFileSync(pdflipLicense, path.join(standaloneOut, "LICENSE-pdflip"));
+
+  const runtimeAssets = [];
+  function collectRuntimeAssets(directory, prefix = "") {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const relative = prefix ? prefix + "/" + entry.name : entry.name;
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) collectRuntimeAssets(absolute, relative);
+      else if (!/\\.(map|d\\.ts)$/.test(entry.name)) runtimeAssets.push(relative);
+    }
+  }
+  collectRuntimeAssets(pdflipOut);
+  fs.writeFileSync(path.join(standaloneOut, "pdflip-assets.json"), JSON.stringify(runtimeAssets, null, 2));
 
   const dflip = path.join(root, "dflip");
   if (fs.existsSync(dflip)) fs.cpSync(dflip, path.join(out, "dflip"), { recursive: true });
 
   await build({ configFile: path.join(root, "maker/vite.config.js") });
 
-  console.log("Build concluído: leitor existente + Maker em /maker/");
+  console.log("Build concluído: leitor pdflip + Maker em /maker/");
 }
 
 main().catch((error) => {
