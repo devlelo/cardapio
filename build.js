@@ -1,11 +1,11 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { build } = require("vite");
 
 const root = process.cwd();
 const out = path.join(root, "dist");
 
 async function main() {
+  const { build } = await import("vite");
   fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(out, { recursive: true });
 
