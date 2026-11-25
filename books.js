@@ -9,6 +9,6 @@
 window.CARDAPIO_BOOKS = {
   "marketing": {
     title: "Marketing",
-    url: "https://drive.google.com/file/d/1nuoUfBkdOf58f5MiD5R3tgLdDrGsoaej/view?usp=sharing"
+    url: "https://drive.google.com/file/d/1nuoUfBkdOf58f5MiD5R3tgLdDrGsoaej/view"
   }
 };
