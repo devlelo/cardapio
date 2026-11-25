@@ -185,9 +185,9 @@ function finishDrawing() {
   els.label.focus();
 }
 function commitLink() {
-  if (!state.draft) return;
+  if (!state.draft) return false;
   const url = safeUrl(els.url.value.trim());
-  if (!url) { status("Introduz um endereço válido, começado por https://, http://, mailto: ou tel:."); return; }
+  if (!url) { status("Introduz um endereço válido, começado por https://, http://, mailto: ou tel:."); return false; }
   state.links.push({
     id: crypto.randomUUID(), page: state.page,
     x: state.draft.left, y: state.draft.top, w: state.draft.w, h: state.draft.h,
@@ -197,6 +197,7 @@ function commitLink() {
   els.stage.classList.remove("drawing-mode");
   $("addLinkBtn").classList.remove("selected");
   updateCounts(); renderLinks(); status("Link adicionado à página " + state.page + ".");
+  return true;
 }
 function downloadBlob(blob, name) {
   const url = URL.createObjectURL(blob);
@@ -252,7 +253,7 @@ $("zoomIn").addEventListener("click", () => { state.zoom = Math.min(1.5, state.z
 $("zoomOut").addEventListener("click", () => { state.zoom = Math.max(.6, state.zoom - .1); $("zoomLabel").textContent = Math.round(state.zoom*100)+"%"; showPage(state.page); });
 $("exportBtn").addEventListener("click", exportBook);
 $("bookBg").addEventListener("input", (e) => { $("colorValue").textContent = e.target.value.toUpperCase(); });
-els.form.addEventListener("submit", (e) => { if (e.submitter?.value === "save") { e.preventDefault(); commitLink(); els.dialog.close(); } });
+els.form.addEventListener("submit", (e) => { if (e.submitter?.value === "save") { e.preventDefault(); if (commitLink()) els.dialog.close(); } });
 els.dialog.addEventListener("close", () => { state.draft = null; });
 els.draw.addEventListener("pointerdown", startDrawing);
 els.draw.addEventListener("pointermove", (e) => updateDraft(e, els.stage.getBoundingClientRect()));
