@@ -32,7 +32,7 @@ async function main() {
       const relative = prefix ? prefix + "/" + entry.name : entry.name;
       const absolute = path.join(directory, entry.name);
       if (entry.isDirectory()) collectRuntimeAssets(absolute, relative);
-      else if (!/\\.(map|d\\.ts)$/.test(entry.name)) runtimeAssets.push(relative);
+      else if (!/\.(map|d\.ts)$/.test(entry.name)) runtimeAssets.push(relative);
     }
   }
   collectRuntimeAssets(pdflipOut);
