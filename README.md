@@ -1,39 +1,50 @@
-# Cardápio — leitor direto de PDF
+# Cardápio + Flipbook Maker
 
-Leitor simples em HTML, CSS e JavaScript com DearFlip.js.
+O repositório mantém o leitor Cardápio existente e acrescenta um editor local de flipbooks na rota `/maker/`.
 
-## Como adicionar um ebook
+## Flipbook Maker
 
-1. Carrega o PDF no Google Drive.
-2. Em Partilhar, define **Qualquer pessoa com o link** como leitor.
-3. Abre `books.js` no GitHub e adiciona um registo:
-   ```js
-   window.CARDAPIO_BOOKS = {
-     "menu-restaurante": {
-       title: "Menu do Restaurante",
-       url: "https://drive.google.com/file/d/ID_DO_PDF/view?usp=sharing"
-     }
-   };
-   ```
-4. Faz commit. O Vercel publica a alteração automaticamente.
-5. O ebook fica disponível em `https://TEU-DOMINIO/menu-restaurante`.
+O editor importa PDF no navegador, renderiza as páginas localmente, preserva hiperligações externas do PDF, permite desenhar áreas clicáveis adicionais e exporta um ZIP autónomo com o leitor PageFlip, páginas e links.
 
-O nome da chave (por exemplo, `menu-restaurante`) é o slug do link. Podes adicionar vários registos separados por vírgulas.
+### Utilização
+1. Abre `/maker/`.
+2. Importa o PDF.
+3. Activa **Adicionar link** e desenha a área clicável.
+4. Introduz o texto e o endereço, por exemplo `https://wa.me/244923000000`.
+5. Exporta o ZIP.
+6. Extrai o ZIP e abre `index.html`.
 
-## DearFlip
+O PDF não é enviado para servidores e não existe base de dados. O ZIP funciona offline; links externos precisam de internet quando forem abertos.
 
-O projeto espera a distribuição oficial do DearFlip na pasta `dflip/`, mantendo a estrutura original:
-- `dflip/css/dflip.min.css`
-- `dflip/js/libs/jquery.min.js`
-- `dflip/js/dflip.min.js`
-- restantes pastas e ficheiros que acompanham a distribuição
+### Build
+Requer Node.js 20 ou superior.
 
-Obtém a distribuição através do fornecedor oficial e coloca a pasta `dflip/` na raiz do repositório. O build copia-a para `dist/dflip/`. Não incluímos nem redistribuímos os ficheiros comerciais do plugin.
+```bash
+npm install
+npm run build
+```
 
-## Nota sobre Google Drive
+O Vercel publica o editor em `/maker/` e mantém as rotas existentes do leitor.
 
-O leitor transforma links de partilha comuns num endereço de download direto. Ainda assim, o Google Drive pode bloquear leitura externa por CORS, limites de transferência ou confirmação de download, especialmente em PDFs grandes. Se isso acontecer, o leitor precisa de um alojamento de ficheiros com suporte adequado a CORS e pedidos Range (por exemplo, Cloudflare R2).
+### Bibliotecas
+- PDF.js — Apache-2.0
+- StPageFlip / page-flip — MIT
+- JSZip — MIT
+- Vite — MIT
 
-## Build
+## Leitor Cardápio existente
 
-`npm run build`
+Para adicionar um ebook, edita `books.js` e cria uma entrada com slug, título e URL pública do PDF:
+
+```js
+window.CARDAPIO_BOOKS = {
+  "menu-restaurante": {
+    title: "Menu do Restaurante",
+    url: "https://exemplo.com/menu.pdf"
+  }
+};
+```
+
+O slug fica disponível no endereço `/menu-restaurante`.
+
+**Nota:** o leitor antigo carrega as bibliotecas por CDN e necessita de internet. O editor e os ZIPs exportados pelo Flipbook Maker usam recursos locais e não dependem de CDN.
