@@ -14,6 +14,7 @@
 
   function error(message) {
     hide("loading");
+    hide("book-shell");
     document.getElementById("error-message").textContent = message;
     show("error");
   }
